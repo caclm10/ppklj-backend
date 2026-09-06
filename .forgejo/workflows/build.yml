@@ -18,11 +18,14 @@ jobs:
           apt-get update
           apt-get install -y docker.io
 
-      - name: Check Dockerfile
+      - name: Check Containerfile
         run: |
           ls -la
-          test -f Dockerfile
+          test -f Containerfile
 
       - name: Build image
         run: |
-          docker build -t ppklj-backend:ci .
+          docker build \
+            -f Containerfile \
+            -t ppklj-backend:ci \
+            .
