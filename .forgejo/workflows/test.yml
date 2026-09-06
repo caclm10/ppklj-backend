@@ -1,0 +1,16 @@
+name: Test Runner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: docker
+
+    steps:
+      - name: Hello
+        run: |
+          echo "Hello from Forgejo Runner"
+          uname -a
