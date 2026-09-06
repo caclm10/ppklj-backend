@@ -1,0 +1,23 @@
+name: Build Backend Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: docker
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Check Dockerfile
+        run: |
+          ls -la
+          test -f Dockerfile
+
+      - name: Build image
+        run: |
+          docker build -t ppklj-backend:ci .
