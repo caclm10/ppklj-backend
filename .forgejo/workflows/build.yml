@@ -32,12 +32,20 @@ jobs:
 
       - name: Build image
         run: |
+          SHORT_SHA=$(echo "${{ forgejo.sha }}" | cut -c1-7)
+
           docker build \
             -f Containerfile \
             -t main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:dev \
+            -t main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:$SHORT_SHA \
             .
 
       - name: Push image
         run: |
+          SHORT_SHA=$(echo "${{ forgejo.sha }}" | cut -c1-7)
+
           docker push \
             main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:dev
+
+          docker push \
+            main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:$SHORT_SHA
