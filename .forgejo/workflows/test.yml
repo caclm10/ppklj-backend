@@ -1,4 +1,4 @@
-name: Test Runner
+name: Test Podman
 
 on:
   push:
@@ -10,7 +10,6 @@ jobs:
     runs-on: docker
 
     steps:
-      - name: Hello
+      - name: Check container engine
         run: |
-          echo "Hello from Forgejo Runner"
-          uname -a
+          ls -l /var/run/docker.sock
