@@ -7,45 +7,27 @@ on:
 
 jobs:
   build:
-    runs-on: docker
+    runs-on: podman
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Docker CLI
-        run: |
-          apt-get update
-          apt-get install -y docker.io
+      - run: podman --version
 
-      - name: Check Containerfile
-        run: |
-          ls -la
-          test -f Containerfile
-
-      - name: Login to Forgejo Registry
-        run: |
+      - run: |
           echo "${{ secrets.REGISTRY_TOKEN }}" | \
-            docker login main-pc-1.taildccbd1.ts.net:9001 \
-            --username "${{ secrets.REGISTRY_USERNAME }}" \
-            --password-stdin
+          podman login main-pc-1.taildccbd1.ts.net:9001 \
+          --username "${{ secrets.REGISTRY_USERNAME }}" \
+          --password-stdin
 
-      - name: Build image
-        run: |
+      - run: |
           SHORT_SHA=$(echo "${{ forgejo.sha }}" | cut -c1-7)
 
-          docker build \
+          podman build \
             -f Containerfile \
             -t main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:dev \
             -t main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:$SHORT_SHA \
             .
 
-      - name: Push image
-        run: |
-          SHORT_SHA=$(echo "${{ forgejo.sha }}" | cut -c1-7)
-
-          docker push \
-            main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:dev
-
-          docker push \
-            main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:$SHORT_SHA
+          podman push main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:dev
+          podman push main-pc-1.taildccbd1.ts.net:9001/lewin/ppklj-backend:$SHORT_SHA
