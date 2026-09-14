@@ -237,7 +237,40 @@ test('authenticated user can record, update, and delete an asset purchase item w
     $this->assertDatabaseMissing('asset_purchases', ['id' => $assetPurchase2Id]);
     $this->assertDatabaseMissing('asset_asset_purchase', ['asset_purchase_id' => $assetPurchase2Id]);
 
-    // Physical asset remains intact and still retains initial purchase record
     expect($asset1->fresh())->not->toBeNull()
         ->and($asset1->fresh()->assetPurchases)->toHaveCount(1);
+});
+
+test('license maintenance quantity cannot exceed its source package quantity', function () {
+    $user = User::factory()->create();
+    $sourcePurchase = Purchase::factory()->create(['type' => PurchaseType::Modal]);
+    $maintenancePurchase = Purchase::factory()->create(['type' => PurchaseType::Pemeliharaan]);
+    $sourcePackage = AssetPurchase::factory()->create([
+        'purchase_id' => $sourcePurchase->id,
+        'quantity' => 120,
+    ]);
+    $license = Asset::factory()->create(['category' => AssetCategory::License]);
+    $sourcePackage->assets()->attach($license);
+
+    $response = $this->actingAs($user)->postJson('/api/asset-purchases', [
+        'purchase_id' => $maintenancePurchase->id,
+        'name' => 'Perpanjangan Lisensi PostgreSQL',
+        'quantity' => 121,
+        'asset_ids' => [$license->id],
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonPath('data.quantity.0', 'Quantity lisensi tidak boleh melebihi quantity paket pengadaan asal.');
+
+    $validResponse = $this->actingAs($user)->postJson('/api/asset-purchases', [
+        'purchase_id' => $maintenancePurchase->id,
+        'name' => 'Perpanjangan Sebagian Lisensi PostgreSQL',
+        'quantity' => 60,
+        'asset_ids' => [$license->id],
+    ]);
+
+    $validResponse->assertCreated()
+        ->assertJsonPath('data.quantity', 60);
+
+    expect($sourcePackage->fresh()->quantity)->toBe(120);
 });

@@ -7,6 +7,7 @@ use App\Models\AssetPurchase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\ValidationException;
 
 class AssetPurchaseController extends Controller
 {
@@ -38,6 +39,10 @@ class AssetPurchaseController extends Controller
             'asset_ids' => ['nullable', 'array'],
             'asset_ids.*' => ['exists:assets,id'],
         ]);
+
+        if (! empty($validated['asset_ids'])) {
+            $this->validateLicenseQuantity($validated['asset_ids'], $validated['quantity'] ?? 1);
+        }
 
         $assetPurchase = AssetPurchase::create($validated);
 
@@ -81,6 +86,10 @@ class AssetPurchaseController extends Controller
             'asset_ids.*' => ['exists:assets,id'],
         ]);
 
+        if (array_key_exists('asset_ids', $validated)) {
+            $this->validateLicenseQuantity($validated['asset_ids'] ?? [], $validated['quantity'] ?? $assetPurchase->quantity);
+        }
+
         $assetPurchase->update($validated);
 
         if (array_key_exists('asset_ids', $validated)) {
@@ -99,6 +108,36 @@ class AssetPurchaseController extends Controller
             message: 'Asset purchase updated successfully',
             data: $assetPurchase->load(['purchase', 'assets']),
         );
+    }
+
+    /**
+     * Ensure a license maintenance quantity does not exceed its source package.
+     *
+     * Hardware quantities are based on selected physical assets and are not capped here.
+     *
+     * @param  array<int, int>  $assetIds
+     */
+    private function validateLicenseQuantity(array $assetIds, int $quantity): void
+    {
+        $licenseAssets = Asset::query()
+            ->whereIn('id', $assetIds)
+            ->where('category', 'license')
+            ->with('assetPurchases')
+            ->get();
+
+        if ($licenseAssets->isEmpty()) {
+            return;
+        }
+
+        $sourceQuantities = $licenseAssets
+            ->map(fn (Asset $asset): ?int => $asset->assetPurchases->max('quantity'))
+            ->filter();
+
+        if ($sourceQuantities->isNotEmpty() && $quantity > $sourceQuantities->min()) {
+            throw ValidationException::withMessages([
+                'quantity' => 'Quantity lisensi tidak boleh melebihi quantity paket pengadaan asal.',
+            ]);
+        }
     }
 
     public function destroy(AssetPurchase $assetPurchase): JsonResponse
